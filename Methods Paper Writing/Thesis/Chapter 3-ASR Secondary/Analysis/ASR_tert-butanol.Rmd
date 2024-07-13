@@ -6,12 +6,13 @@ date: "2023-08-05"
 # Import data
 ```{r}
 library(tidyverse)
-raw <- read.table("/space/htang5/Downloads/Thesis/Chapter 3-ASR Secondary/Input/tert-butanol.tsv", sep="\t", header=TRUE)
+require(cowplot)
+require(broom)
+raw <- read.table("../Input/tert-butanol.tsv", sep="\t", header=TRUE)
  summary(raw)
 ```
 
 ```{r}
-library(dplyr)
 tmp <-  raw %>%
   mutate(
     scaled = Count * Dilutions * 1e-2
@@ -24,20 +25,16 @@ dat.f3 <- tmp %>%
   group_by(Date, Strain, Primary) %>% 
   mutate(scaled_M = scaled[Secondary == "M"],
          r = num(scaled / scaled[Secondary == "M"], digits = 3)) %>% 
-   dplyr::filter(Secondary != "M") %>%
+  dplyr::filter(Secondary != "M") %>%
   #pivot_wider(id_cols = c(Date, Strain, Species, H2O2), 
-              #names_from = Primary, values_from = r, names_prefix = "r") %>% 
+  #names_from = Primary, values_from = r, names_prefix = "r") %>% 
   #mutate(ASR_score = rP / rM) %>%
-mutate(Label = paste(Species, tBOOH, sep = "_"))
-print(dat.f3)
+  mutate(Label = paste(Species, tBOOH, sep = "_"))
+print(dat.f3 %>% arrange(tBOOH))
 #write_tsv(dat.f3, file = "/space/htang5/Downloads/Thesis/Chapter 3-ASR Secondary/output/tertbutanolASR-Calculated.tsv")
 ```
 ### Plot (all data)
 ```{r}
-library(ggplot2)
-require(tidyverse)
-require(cowplot)
-require(broom)
 dat.f3 %>% 
   mutate( Primary = factor(Primary, levels = c("M", "P"), 
                      labels = c("Mock", "-Pi")),
@@ -47,11 +44,13 @@ dat.f3 %>%
   ggplot(aes(x = Primary, y = r)) + 
   geom_point(aes(shape = Primary), stroke = 1, size = 2, 
              position = position_dodge(0.9)) +
+  geom_line(aes(group = Date, color = str_sub(Date, 1, -2))) +
   stat_summary(aes(group = Primary), position = position_dodge(0.9),
                fun = mean, fun.max = mean, fun.min = mean,
                geom = "crossbar", color = "red", width = 0.5) +
   facet_wrap(~ tBOOH, nrow = 1, scales = "free_x") +
   scale_shape_manual(values = c("Mock" = 1, "-Pi" = 16)) +
+  scale_color_brewer("Date", type = "qual", palette = 3) +
   scale_y_continuous(limits = c(0, 0.4), labels = scales::percent) +
   xlab("Primary stress (45 min)") + ylab("% survival") +
   panel_border(color = "black", size = 1.5) +
@@ -106,11 +105,11 @@ ggsave("/space/htang5/Downloads/Thesis/Chapter 2-ASR Species/Output/20240125-KlA
 
 ```{r}
 tmp1 <- dat.f3 %>% 
- dplyr::filter(Secondary != "M") %>%
+  filter(Secondary != "M") %>%
   pivot_wider(id_cols = c(Date, Strain, Species, tBOOH), 
               names_from = Primary, values_from = r, names_prefix = "r") %>% 
   mutate(ASR_score = rP / rM)
-print(tmp1)
+print(tmp1 %>% arrange(tBOOH))
 #write_tsv(tmp1, file = "/space/htang5/Downloads/KlASR-Ch2-ASRScore.tsv")
 ```
 
