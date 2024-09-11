@@ -1,0 +1,72 @@
+date	replicate	treatment	name
+2023-09-15	A	10	091523_Cg log FGL_Experiment_Plate_10.fcs
+2023-09-15	A	100	091523_Cg log FGL_Experiment_Plate_100.fcs
+2023-09-15	A	1000	091523_Cg log FGL_Experiment_Plate_1M.fcs
+2023-09-15	A	2	091523_Cg log FGL_Experiment_Plate_2.fcs
+2023-09-15	A	20	091523_Cg log FGL_Experiment_Plate_20.fcs
+2023-09-15	A	4	091523_Cg log FGL_Experiment_Plate_4.fcs
+2023-09-15	A	40	091523_Cg log FGL_Experiment_Plate_40.fcs
+2023-09-15	A	6	091523_Cg log FGL_Experiment_Plate_6.fcs
+2023-09-15	A	60	091523_Cg log FGL_Experiment_Plate_60.fcs
+2023-09-15	A	8	091523_Cg log FGL_Experiment_Plate_8.fcs
+2023-09-15	A	80	091523_Cg log FGL_Experiment_Plate_80.fcs
+2023-09-15	A	0	091523_Cg log FGL_Experiment_Plate_Mock.fcs
+2023-09-18	A	10	091823_Cg log FGL_Experiment_Plate_10.fcs
+2023-09-18	A	100	091823_Cg log FGL_Experiment_Plate_100.fcs
+2023-09-18	A	1000	091823_Cg log FGL_Experiment_Plate_1M.fcs
+2023-09-18	A	2	091823_Cg log FGL_Experiment_Plate_2.fcs
+2023-09-18	A	20	091823_Cg log FGL_Experiment_Plate_20.fcs
+2023-09-18	A	4	091823_Cg log FGL_Experiment_Plate_4.fcs
+2023-09-18	A	6	091823_Cg log FGL_Experiment_Plate_6.fcs
+2023-09-18	A	60	091823_Cg log FGL_Experiment_Plate_60.fcs
+2023-09-18	A	8	091823_Cg log FGL_Experiment_Plate_8.fcs
+2023-09-18	A	80	091823_Cg log FGL_Experiment_Plate_80.fcs
+2023-09-18	B	10	091823_Cg log FGL_Experiment_Plate_B 10.fcs
+2023-09-18	B	100	091823_Cg log FGL_Experiment_Plate_B 100.fcs
+2023-09-18	B	1000	091823_Cg log FGL_Experiment_Plate_B 1M.fcs
+2023-09-18	B	2	091823_Cg log FGL_Experiment_Plate_B 2.fcs
+2023-09-18	B	20	091823_Cg log FGL_Experiment_Plate_B 20.fcs
+2023-09-18	B	4	091823_Cg log FGL_Experiment_Plate_B 4.fcs
+2023-09-18	B	40	091823_Cg log FGL_Experiment_Plate_B 40.fcs
+2023-09-18	B	6	091823_Cg log FGL_Experiment_Plate_B 6.fcs
+2023-09-18	B	60	091823_Cg log FGL_Experiment_Plate_B 60.fcs
+2023-09-18	B	8	091823_Cg log FGL_Experiment_Plate_B 8.fcs
+2023-09-18	B	80	091823_Cg log FGL_Experiment_Plate_B 80.fcs
+2023-09-18	B	0	091823_Cg log FGL_Experiment_Plate_B Mock.fcs
+2023-09-18	A	0	091823_Cg log FGL_Experiment_Plate_Mock.fcs
+2023-09-21	A	10	092123_Cg log FGL_Experiment_Plate_10.fcs
+2023-09-21	A	100	092123_Cg log FGL_Experiment_Plate_100.fcs
+2023-09-21	A	1000	092123_Cg log FGL_Experiment_Plate_1M.fcs
+2023-09-21	A	2	092123_Cg log FGL_Experiment_Plate_2.fcs
+2023-09-21	A	20	092123_Cg log FGL_Experiment_Plate_20.fcs
+2023-09-21	A	4	092123_Cg log FGL_Experiment_Plate_4.fcs
+2023-09-21	A	40	092123_Cg log FGL_Experiment_Plate_40.fcs
+2023-09-21	A	6	092123_Cg log FGL_Experiment_Plate_6.fcs
+2023-09-21	A	60	092123_Cg log FGL_Experiment_Plate_60.fcs
+2023-09-21	A	8	092123_Cg log FGL_Experiment_Plate_8.fcs
+2023-09-21	A	80	092123_Cg log FGL_Experiment_Plate_80.fcs
+2023-09-21	A	0	092123_Cg log FGL_Experiment_Plate_Mock.fcs
+2023-09-25	A	10	092523_Cg log FGL_Experiment_Plate_10.fcs
+2023-09-25	A	100	092523_Cg log FGL_Experiment_Plate_100.fcs
+2023-09-25	A	1000	092523_Cg log FGL_Experiment_Plate_1M.fcs
+2023-09-25	A	2	092523_Cg log FGL_Experiment_Plate_2.fcs
+2023-09-25	A	20	092523_Cg log FGL_Experiment_Plate_20.fcs
+2023-09-25	A	4	092523_Cg log FGL_Experiment_Plate_4.fcs
+2023-09-25	A	40	092523_Cg log FGL_Experiment_Plate_40.fcs
+2023-09-25	A	6	092523_Cg log FGL_Experiment_Plate_6.fcs
+2023-09-25	A	60	092523_Cg log FGL_Experiment_Plate_60.fcs
+2023-09-25	A	8	092523_Cg log FGL_Experiment_Plate_8.fcs
+2023-09-25	A	80	092523_Cg log FGL_Experiment_Plate_80.fcs
+2023-09-25	B	10	092523_Cg log FGL_Experiment_Plate_B 10.fcs
+2023-09-25	B	100	092523_Cg log FGL_Experiment_Plate_B 100.fcs
+2023-09-25	B	1000	092523_Cg log FGL_Experiment_Plate_B 1M.fcs
+2023-09-25	B	2	092523_Cg log FGL_Experiment_Plate_B 2.fcs
+2023-09-25	B	20	092523_Cg log FGL_Experiment_Plate_B 20.fcs
+2023-09-25	B	4	092523_Cg log FGL_Experiment_Plate_B 4.fcs
+2023-09-25	B	40	092523_Cg log FGL_Experiment_Plate_B 40.fcs
+2023-09-25	B	6	092523_Cg log FGL_Experiment_Plate_B 6.fcs
+2023-09-25	B	60	092523_Cg log FGL_Experiment_Plate_B 60.fcs
+2023-09-25	B	8	092523_Cg log FGL_Experiment_Plate_B 8.fcs
+2023-09-25	B	80	092523_Cg log FGL_Experiment_Plate_B 80.fcs
+2023-09-25	B	0	092523_Cg log FGL_Experiment_Plate_B Mock.fcs
+2023-09-25	A	0	092523_Cg log FGL_Experiment_Plate_Mock.fcs

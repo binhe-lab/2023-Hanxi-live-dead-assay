@@ -1,0 +1,236 @@
+---
+title: "Illustrate the initial phenotypes"
+author: Bin He, Hanxi Tang
+date: "2024-09-05 (updated `r Sys.time()`)"
+output:
+  html_notebook:
+    toc: true
+    toc_depth: 4
+    code_folding: hide
+---
+
+# Background
+This folder contains analyses for showing the initial staining patterns we observed when applying FungaLight to oxidative stress damaged _C. glabrata_ cells. Note that these are not exactly our first trial results, which suffer a lot more inconsistencies and abnormalities, due to our inexperience with the reagent and protocol in general. Rather, these are the "alpha" tests of the protocol after some preliminary tests, and represent at least "sensible" results, although with important caveats that we addressed in the later protocol optimization steps.
+
+
+```{r setup, message=FALSE}
+require(tidyverse)
+require(flowCore)
+require(flowClust)
+require(openCyto)
+require(ggcyto)
+require(cowplot)
+require(ggridges)
+```
+
+```{r}
+old <- theme_set(theme_minimal())
+```
+
+# Import data
+
+> FCS files are stored in RDSS/user/flow cytometry, FCS is read and write into an input tsv table. The tsv file is avaliable from the Input folder.
+
+```{r}
+# use relative path to make it easier for collaboration
+data.path = "/Volumes/rdss_bhe2/User/Hanxi-Tang/flow_cytometry/20230929 FungaLight-Cgla-analysis/"
+dat0 <- read.flowSet(path = data.path, transformation = FALSE,  # the original values are already linearized. 
+                     emptyValue = FALSE,  alter.names = TRUE,   # change parameter names to R format
+                     column.pattern = ".H|FSC|SSC") # only load the height variables for the fluorescent parameters
+```
+
+## Simplify the sample names
+
+```{r}
+#source("../../../00-Shared/01-script/20220326-simplify-names-subroutine.R")
+oriNames <- sampleNames(dat0)
+tmp <- str_split(oriNames, pattern = "_", simplify = TRUE)[,c(1, 5)]
+colnames(tmp) <- c("Date", "Treatment")
+sample <- data.frame(tmp) %>% 
+  mutate(
+    date = mdy(Date),
+    replicate = ifelse(str_sub(Treatment, 1, 1) == "B", "B", "A"),
+    treatment = sub("B ", "", Treatment) %>% sub(".fcs", "", .) %>% 
+      gsub("1M", "1000", .) %>% gsub("Mock", "0", .),
+    treatment = factor(treatment, levels = sort(as.numeric(unique(treatment))))
+  ) %>% 
+  select(-Date, - Treatment)
+tr.levels <- levels(sample$treatment)
+rownames(sample) <- oriNames
+dat <- dat0 # make a copy
+pData(dat) <- sample
+print(pData(dat) %>% as_tibble())
+write_tsv(pData(dat), file = "../input/20230929-sample-list.tsv")
+```
+
+# Basic gating
+## Outlier
+The following gaphing steps are used to gate singlets by FSC and SSC values. Only singlets are included in analysis.
+
+```{r}
+outlier.gate <- rectangleGate(filterId = "-outlier", "FSC.H" = c(1.2e5, 1e6), "SSC.H" = c(1e2, 1e6))
+ggcyto(dat[c(2,20)], aes(x = FSC.H, y = SSC.H), subset = "root") +
+  geom_hex(bins = 64) + geom_gate(outlier.gate) + facet_wrap(~name, ncol = 2) + ggcyto_par_set(limits = "instrument")
+# ----
+# uncomment the code below to check on all data
+# ----
+# ggcyto(dat, aes(x = FSC.H, y = SSC.H), subset = "root") +
+#   geom_hex(bins = 64) + geom_gate(outlier.gate) + facet_wrap(~name, ncol = 9) + ggcyto_par_set(limits = "instrument") +
+#   theme_minimal_grid()
+# ----
+# end
+# ----
+```
+Add gate to GS
+```{r}
+# shorten the names of the samples for plotting
+shortNames <- with(pData(dat), 
+                   paste(substr(date, 6, 10), replicate,
+                         paste0(treatment, "mM"), sep = "_"))
+names(shortNames) <- sampleNames(dat)
+gs <- GatingSet(dat) # create a GatingSet
+# rename the GatingSet
+if(all(sampleNames(gs) == names(shortNames)))
+  pData(gs)$name <- shortNames
+# add the outlier gate
+gs_pop_add(gs, outlier.gate, parent = "root")
+# compute
+recompute(gs)
+```
+
+## Gate for singlets
+
+```{r fig.width=4, fig.height=4}
+scPars <- ggcyto_par_set(limits = list(x = c(0,1e6), y = c(30,300)))
+ex <- Subset(dat[[19]], outlier.gate)
+polygon <- matrix(c(1e5, 1e5, 1e6, 1e6, 
+                    60, 75, 135,60), ncol = 2)
+colnames(polygon) <- c("FSC.H", "FSC.W")
+singlet.gate <- polygonGate(filterId = "singlet", .gate = polygon)
+ggcyto(ex, aes(x = FSC.H, y = FSC.W)) + geom_hex(bins = 128) + geom_gate(singlet.gate) + geom_stats() + scPars
+```
+
+
+Add this gate to the gatingSet
+```{r}
+gs_pop_add(gs, singlet.gate, parent = "-outlier", name = "singlet")
+recompute(gs)
+```
+```{r fig.width=6}
+scPars <- ggcyto_par_set(limits = list(x = c(0,1e6), y = c(30,200)))
+test <- sample(1:length(gs), 8)
+ggcyto(gs[test], aes(x = FSC.H, y = FSC.W), subset = "-outlier") +
+  geom_hex(bins = 128) + geom_gate("singlet") + facet_wrap(~name, ncol = 4) + 
+  scPars# + theme(strip.text = element_blank())
+
+```
+Check number of events after gating
+```{r}
+gated_events <- gs_pop_get_stats(gs, "singlet") %>% 
+  left_join(pData(gs) %>% rownames_to_column(var = "sample"), by = "sample") %>% 
+  arrange(count)
+
+gated_events %>% 
+  mutate(name = fct_reorder(name, count)) %>% 
+  ggplot(aes(x = name, y = count)) +
+  geom_col() +
+  theme_cowplot() + xlab(NULL) +
+  theme(
+    axis.text.x = element_text(angle = 90, size = rel(0.5))
+  )
+```
+
+## FSC and SSC vs treatment and dye {.tabset}
+
+### FSC
+
+```{r}
+mult_format <- function() {
+     function(x) format(x/10000,digits = 2) 
+}
+#for(date in unique(sample$date)){
+  p <- ggcyto(gs, aes(x = FSC.H), subset = "singlet") + 
+    geom_density_ridges(aes(y = factor(treatment, levels = tr.levels)), 
+                            fill = "forestgreen", alpha = 0.8) + 
+    scale_x_continuous(labels = mult_format(), name = "FSC.H x 10000") +
+    facet_wrap(~date + replicate, 
+               labeller = labeller(.multi_line = FALSE)) + 
+    ylab("H2O2 concentration")
+  print(p)
+#}
+```
+
+> there is a trend of decreasing FSC with stronger H2O2 treatment
+
+### SSC
+
+```{r}
+  p <- ggcyto(gs, aes(x = SSC.H), subset = "singlet") + 
+    geom_density_ridges(aes(y = factor(treatment, levels = tr.levels)), 
+                            fill = "forestgreen", alpha = 0.8) + 
+    scale_x_continuous(labels = mult_format(), name = "SSC.H x 10000") +
+    facet_wrap(~date + replicate, 
+               labeller = labeller(.multi_line = FALSE)) + 
+    ylab("H2O2 concentration")
+  print(p)
+
+```
+> SSC (complexity of cell, roughly) decreases with increasing H2O2 concentration
+
+### BL1.H (green staining)
+```{r}
+#for(date in c("011124", "011524", "011624")){
+  p <- ggcyto(gs, aes(x = BL1.H), subset = "singlet") + 
+    geom_density_ridges(aes(y = factor(treatment, levels = tr.levels)), 
+                            fill = "forestgreen", alpha = 0.8) + 
+    scale_x_logicle() +
+    facet_wrap(~date + replicate, 
+               labeller = labeller(.multi_line = FALSE)) + 
+    ylab("H2O2 concentration")
+  print(p)
+#}
+```
+
+
+### BL3.H (red staining)
+```{r}
+#for(date in c("011124", "011524", "011624")){
+  p <- ggcyto(gs, aes(x = BL3.H), subset = "singlet") + 
+    geom_density_ridges(aes(y = factor(treatment, levels = tr.levels)), 
+                            fill = "forestgreen", alpha = 0.8) + 
+    scale_x_logicle() +
+    facet_wrap(~date + replicate, 
+               labeller = labeller(.multi_line = FALSE)) + 
+    ylab("H2O2 concentration")
+  print(p)
+#}
+```
+
+# Plotting initial phenotype
+Here, we plot the G+R staining patterns from multiple days to observe the consistency of the assay
+```{r}
+p <- ggcyto(gs[pData(gs)$replicate == "A" & 
+                 pData(gs)$treatment %in% c("0", "10", "100", "1000") &
+                 pData(gs)$date != "2023-09-18"],
+            aes(x = BL1.H, y = BL3.H), subset = "singlet") + 
+  geom_hex(aes(fill = after_stat(density)), bins = 64) + 
+  facet_grid(date ~ factor(treatment, levels = tr.levels),
+             labeller = labeller(.multi_line = F)) +
+  scale_x_logicle(breaks = c(10^2, 10^3, 10^4)) + 
+  scale_y_logicle(breaks = c(10^2, 10^3, 10^4)) + 
+  theme_minimal(base_size = 16) + 
+  panel_border(color = "gray20") + #background_grid(major = "none", minor = "none") +
+  theme(
+    #axis.line = element_blank(),
+    strip.text.y = element_blank(),
+    strip.text.x = element_text(size = rel(1.2), color = "steelblue", face = 2),
+    axis.text = element_text(size = rel(0.6)),
+    plot.title = element_blank(),
+    legend.position = "none",
+    axis.title = element_blank()
+  )
+
+p
+ggsave("../output/fig1-staining-consistency-20240911.png", width = 5, height = 4)
+```
+
