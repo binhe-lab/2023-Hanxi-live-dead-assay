@@ -209,9 +209,10 @@ mult_format <- function() {
 # Plotting initial phenotype
 Here, we plot the G+R staining patterns from multiple days to observe the consistency of the assay
 ```{r}
-p <- ggcyto(gs[pData(gs)$replicate == "A" & 
-                 pData(gs)$treatment %in% c("0", "10", "100", "1000") &
-                 pData(gs)$date != "2023-09-18"],
+subset.to.plot <- pData(gs)$replicate == "A" & 
+  pData(gs)$treatment %in% c("0", "10", "100", "1000") &
+  pData(gs)$date != "2023-09-18"
+p <- ggcyto(gs[subset.to.plot],
             aes(x = BL1.H, y = BL3.H), subset = "singlet") + 
   geom_hex(aes(fill = after_stat(density)), bins = 64) + 
   facet_grid(date ~ factor(treatment, levels = tr.levels),
@@ -233,4 +234,47 @@ p <- ggcyto(gs[pData(gs)$replicate == "A" &
 p
 ggsave("../output/fig1-staining-consistency-20240911.png", width = 5, height = 4)
 ```
+## Quantify the dead like population in the mock treated sample
+
+We notice that the mock-treated samples contain a subpopulation of "dead-like" cells, whose abundance vary between replicates. We would like to quantify their amount using a gate.
+
+```{r}
+#scPars <- ggcyto_par_set(limits = list(x = c(0,1e6), y = c(0,1e5)))
+polygon <- matrix(c(10, 10^2.4, 10^4.2, 10,
+                    10^2.1, 10^2.1, 10^4.2, 10^4.2), ncol = 2)
+colnames(polygon) <- c("BL1.H", "BL3.H")
+deadlike.gate <- polygonGate(filterId = "deadlike", .gate = polygon)
+#for(date in c("011124", "011524", "011624")){
+p <- ggcyto(gs[subset.to.plot],
+            aes(x = BL1.H, y = BL3.H), subset = "singlet") + 
+  geom_hex(aes(fill = after_stat(density)), bins = 64) + 
+  geom_gate(deadlike.gate, linewidth = 0.5, alpha = 0.5) + 
+  geom_stats(location = "gate", adjust = c(0.01, 0.8), digits = 2, size = 3) + 
+  #labs(title = paste0("Date: ", date)) +
+  facet_grid(date ~ factor(treatment, levels = tr.levels)) +
+  scale_x_logicle() + scale_y_logicle() + 
+  theme_minimal(base_size = 16) + 
+  panel_border(color = "gray20") + #background_grid(major = "none", minor = "none") +
+  theme(
+    #axis.line = element_blank(),
+    strip.text.y = element_blank(),
+    strip.text.x = element_text(size = rel(1.2), color = "steelblue", face = 2),
+    axis.text = element_text(size = rel(0.6)),
+    
+    plot.title = element_blank(),
+    legend.position = "none",
+    axis.title = element_blank()
+  )
+print(p)
+ggsave("../output/fig1-staining-consistency-gated-20240913.png", width = 5, height = 4)
+```
+> Notice the higher percentage of events in the live gate in 10 mM vs mock.
+
+Add this gate to the gatingSet
+
+```{r eval=FALSE, include=FALSE}
+gs_pop_add(gs, live.gate, parent = "singlet", name = "live")
+recompute(gs)
+```
+
 
