@@ -6,6 +6,5 @@
 .RData
 .Ruserdata
 rsconnect/
-# flow cytometry raw data
-*.fcs
+# flow cytometry Attune experiment file
 *.apx

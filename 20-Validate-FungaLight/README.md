@@ -1,0 +1,1 @@
+This folder contains analysis aimed at validating the FungaLight estimates against CFU and PI, two commonly used methods in the literature for quantifying viability (survival) for yeast research and microbial fitness in general.
