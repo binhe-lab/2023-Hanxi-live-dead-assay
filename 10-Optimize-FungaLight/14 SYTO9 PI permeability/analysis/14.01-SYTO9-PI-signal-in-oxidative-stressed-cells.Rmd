@@ -331,6 +331,9 @@ summary(lm)
 
 ---
 
+Below are Hanxi's analysis code. They are commented out and saved as an archive for future reference.
+
+<!---
 ```{r}
 sub <- dat.f1[pData(dat.f1)$Dye == "PI" & pData(dat.f1)$Date == "112023"] 
 sg <- Subset(sub, singlet.gate)
@@ -622,16 +625,4 @@ combined_plot <- plot_grid(p1, p2, p3, nrow = 1, ncol = 3, common.legend = TRUE,
 print(combined_plot)
 ggsave("../output/20240430-SYTO9-Cg-Log-Gated.png")
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
+--->
