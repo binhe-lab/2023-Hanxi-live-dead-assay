@@ -1,0 +1,19 @@
+# analysis scripts and short descriptions
+- **SYTO9-Cell-Density-011124.rmd**
+    - 
+- **Synthetic.rmd**
+- **Archive/SYTO9-Cell-Density.rmd**
+- **Archive/SYTO9-PI-Concentration-Graphing.rmd**
+- **SYTO9-Timecourse-Graphing.Rmd**
+    - SYTO9 signal as a function of staining time
+- **PI-Timecourse-Graphing.Rmd**
+    - PI signal as a function of staining time
+- **Unstained.rmd**
+- **Dye Order & distinguishing Power.rmd**
+- **Midlog Count.rmd**
+- **SYTO9-PI-Concentration-Graphing-011024.rmd**
+- **Buffer Optimization.rmd**
+- **FGL Interactions.Rmd**
+- **Sc-SYTO9-PI-Concentration-Graphing-021924.rmd**
+- **Mock Peak Reduction.rmd**
+- **Pre-opt.rmd**
