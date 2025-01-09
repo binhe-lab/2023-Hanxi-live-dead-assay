@@ -1,0 +1,3 @@
+We observed an intermediate high-green high-red population most prominent in the 100 mM treated cells. this is different from what's shown in the manual. the analyses in this folder explores the potential reason and how to exploit this population to tell us more about the cell viability.
+
+We hypothesize that the high-green high-red popuplation are damaged cells that are more permeable to SYTO9 but not yet permeable to PI. We test this hypothesis by quantifying SYTO9 and PI staining signals in samples treated with increasing concentrations of hydrogen peroxide. To distinguish the signals in the red channel between SYTO9 and PI, we apply the two dyes separately.
