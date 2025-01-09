@@ -1,0 +1,1 @@
+testing the effect of incubation time while staining - too short a time may result in insufficient dye penetration (not reaching equilibrium) while too long an incubation, one could see signal decay due to photobleaching (although, sample is kept in the dark until run on the flow cytometer).

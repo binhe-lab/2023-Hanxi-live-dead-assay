@@ -1,0 +1,218 @@
+---
+title: "SYTO9 and PI staining signal over time analysis"
+author: Bin He, originally by Hanxi Tang
+date: "2024-09-24 (updated `r Sys.Date()`)"
+output:
+  html_notebook:
+    theme: cerulean
+    toc: true
+    toc_float: true
+    toc_depth: 4
+    code_folding: hide
+---
+
+# Goal
+Determine the signal intensity over time for each component of FungaLight separately, namely SYTO9 and PI. This data will help us determine the optimal staining protocol.
+
+```{r setup, message=FALSE}
+require(flowCore)
+require(flowClust)
+require(openCyto)
+require(tidyverse)
+require(ggcyto)
+require(cowplot)
+```
+
+```{r}
+old <- theme_set(theme_minimal())
+```
+# Import data
+> FCS files are stored in RDSS/user/flow cytometry, FCS is read and write into an input tsv table. The tsv file is avaliable from the Input folder.
+
+load SYTO9 time course
+```{r}
+#data.path = "/space/htang5/Documents/121523 SYTO9 Timeline/Raw"
+data.path = c(paste0("/Volumes/rdss_bhe2/User/Hanxi-Tang/flow_cytometry/202312",
+                   13:15, " SYTO Timecourse/"),
+              "/Volumes/rdss_bhe2/User/Hanxi-Tang/flow_cytometry/20231204 SYTO Timecourse/")
+tmp <- map(data.path, \(x) 
+           # the original values are already linearized. 
+           read.flowSet(path = x, transformation = FALSE,
+                        # only include FCS files
+                        pattern = "\\.fcs$",
+                        # change parameter names to R format
+                        emptyValue = FALSE,  alter.names = TRUE,   
+                        # only load the height variables for the fluorescent parameters
+                        column.pattern = ".H|FSC|SSC"),
+           .progress = TRUE
+)
+# combine into one
+dat0.syto9 = rbind2(tmp[[1]], tmp[[2]]) |> rbind2(tmp[[3]]) |> rbind2(tmp[[4]]) 
+oriNames <- sampleNames(dat0.syto9)
+tmp <- str_split(oriNames, pattern = "_", simplify = TRUE)[,c(1, 5)] 
+colnames(tmp) <- c("date", "time") 
+sample.syto9 <- data.frame(tmp) %>%
+  mutate(
+    date = mdy(date),
+    time = gsub(".fcs", "", time) |> as.numeric(),
+    #time = factor(time, levels = as.character(c(0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60))),
+    dye = "SYTO9"
+  )
+rownames(sample.syto9) <- oriNames
+pData(dat0.syto9) <- sample.syto9
+write_tsv(sample.syto9, file = "../input/20231215-SYTO9-timecourse-sample-info.tsv")
+```
+
+load PI time course
+```{r}
+data.path = "/Volumes/rdss_bhe2/User/Hanxi-Tang/flow_cytometry/20240506-09_PI_Timecourse/"
+dat0.pi <- read.flowSet(path = data.path, transformation = FALSE,  # the original values are already linearized. 
+                   emptyValue = FALSE,  alter.names = TRUE,   # change parameter names to R format
+                   column.pattern = ".H|FSC|SSC") # only load the height variables for the fluorescent parameters
+oriNames <- sampleNames(dat0.pi)
+tmp <- str_split(oriNames, pattern = "_", simplify = TRUE)[,c(1, 6)] 
+colnames(tmp) <- c("date", "time") 
+sample.pi <- data.frame(tmp) %>%
+  mutate(
+    date = mdy(date),
+    time = gsub(".fcs", "", time) |> as.numeric(),
+    #time = factor(time, levels = as.character(c(0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60))),
+    dye = "PI"
+  )
+rownames(sample.pi) <- oriNames
+pData(dat0.pi) <- sample.pi
+```
+
+Combine the two time courses
+```{r}
+dat0 <- rbind2(dat0.syto9, dat0.pi)
+sample <- bind_rows(sample.syto9, sample.pi)
+```
+
+# Gatting strategies
+> The following gaphing steps are used to gate singlets by FSC and SSC values. Only singlets are included in analysis.
+
+## Gate for singlets
+Gate for outlier 
+
+```{r}
+outlier.gate <- rectangleGate(filterId = "-outlier", "FSC.H" = c(1.2e5, 1e6), "SSC.H" = c(1e2, 1e6))
+ggcyto(dat0[13], aes(x = FSC.H, y = SSC.H), subset = "root") +
+  geom_hex(bins = 64) + geom_gate(outlier.gate) + facet_wrap(~name, ncol = 2) + ggcyto_par_set(limits = "instrument")
+```
+Add gate to GS
+```{r}
+# create a GatingSet
+gs <- GatingSet(dat0)
+# add root gate
+gs_pop_add(gs, outlier.gate, parent = "root")
+recompute(gs)
+```
+
+Gate for singlets
+
+```{r}
+scPars <- ggcyto_par_set(limits = list(x = c(0,1e6), y = c(30,300)))
+ex <- Subset(dat0[c(5, 15)], outlier.gate)
+polygon <- matrix(c(1e5, 1e5, 1e6, 1e6, 
+                    60, 105, 135,60), ncol = 2)
+colnames(polygon) <- c("FSC.H", "FSC.W")
+singlet.gate <- polygonGate(filterId = "singlet", .gate = polygon)
+ggcyto(ex, aes(x = FSC.H, y = FSC.W)) + geom_hex(bins = 128) + geom_gate(singlet.gate) + geom_stats() + scPars
+```
+
+
+Add this gate to the gatingSet
+```{r}
+gs_pop_add(gs, singlet.gate, parent = "-outlier", name = "singlet")
+recompute(gs)
+```
+
+Plot all data
+```{r, fig.width=8, fig.height=8}
+ggcyto(gs, aes(x = FSC.H, y = FSC.W), subset = "-outlier") + 
+  geom_hex(bins = 128) + geom_gate(singlet.gate) + 
+  geom_stats(location = "plot") + scPars +
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        strip.text = element_blank())
+```
+Quick overview of all data plotted on BL1.H and BL3.H
+```{r}
+p <- ggcyto(gs,
+            aes(x = BL1.H, y = BL3.H), subset = "singlet") + 
+  geom_hex(aes(fill = after_stat(density)), bins = 64) + 
+  scale_x_logicle(breaks = c(10^2, 10^3, 10^4)) + 
+  scale_y_logicle(breaks = c(10^2, 10^3, 10^4)) + 
+  theme_minimal(base_size = 14) + 
+  panel_border(color = "gray20") + #background_grid(major = "none", minor = "none") +
+  theme(
+    axis.text = element_blank(),
+    strip.text = element_blank(),
+    #axis.line = element_blank(),
+    #strip.text.y = element_text(face = 2),
+    #strip.text.x = element_text(face = 2),
+    #axis.text = element_text(size = rel(0.6)),
+    plot.title = element_blank(),
+    legend.position = "none",
+    axis.title = element_blank()
+  )
+print(p)
+
+```
+
+# Extract MFI across flowFrames
+
+Based on what we see above, we will simply take the MFI from the singlet gated population for each sample in the BL1.H and BL3.H channels. The resulting table will be exported into the output folder.
+```{r}
+fs.out <- gs_pop_get_data(gs, y = "singlet")
+tmp <- fsApply(fs.out, each_col, median)
+# add the sample annotations
+stats.out <- merge(tmp, pData(dat0), by = "row.names") %>% 
+  select(dye, time, ends_with(".H"), date, name, -SSC.H)
+#if(all(rownames(tmp) == rownames(sample))){
+#  stats.out <- cbind(pData(dat.f1c), tmp) %>% 
+#    as.tibble() %>% relocate(name, .after = last_col())
+#}else
+#  warning("Stats rownames don't match the sample information matrix!")
+write_tsv(stats.out, file = "../output/20240925-SYTO9-PI-signal-over-time-MFI.tsv")
+```
+
+# Graphing 
+
+## SYTO9
+
+```{r}
+stats.out %>%
+  dplyr::filter(time != 60, dye == "SYTO9") %>%
+  ggplot(aes(x = time, y = BL1.H)) +
+  geom_point(stroke = 1, size = 1.5, color = "gray30", 
+             position = position_jitter(0.2)) +
+  stat_summary(aes(group = time), fun.data = "mean_cl_boot", geom = "errorbar", 
+               size = 0.5, width = 2, color = "red")+
+  stat_summary(aes(group = time), fun = "mean", geom = "point",
+               shape = "-", size = 15, color = "red") +
+  scale_x_continuous(breaks = seq(0, 60, 10)) +
+  labs(x = "Time (min)", y = "Green - MFI (a.u.)") +
+  theme_minimal(base_size = 18) +
+  panel_border(color = "black", size = 1)
+ggsave("../output/20240925-SYTO9-signal-over-time-plot.png", width = 6, height = 4)
+```
+## PI
+
+```{r}
+stats.out %>%
+  dplyr::filter(time != 60, dye == "PI") %>%
+  ggplot(aes(x = time, y = BL3.H)) +
+  geom_point(stroke = 1, size = 1.5, color = "gray30", 
+             position = position_jitter(0.2)) +
+  stat_summary(aes(group = time), fun.data = "mean_cl_boot", geom = "errorbar", 
+               size = 0.5, width = 2, color = "red")+
+  stat_summary(aes(group = time), fun = "mean", geom = "point",
+               shape = "-", size = 15, color = "red") +
+  scale_x_continuous(breaks = seq(0, 60, 10)) +
+  labs(x = "Time (min)", y = "Red - MFI (a.u.)") +
+  theme_minimal(base_size = 18) +
+  panel_border(color = "black", size = 1)
+ggsave("../output/20240925-PI-signal-over-time-plot.png", width = 6, height = 4)
+```
