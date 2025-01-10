@@ -11,12 +11,6 @@ output:
     code_folding: hide
 ---
 
-# Goal
-We observed an intermediate high-green high-red population most prominent in the 100 mM treated cells. This is different from what's shown in the FungaLight manual. We hypothesize that the high-green high-red popuplation are damaged cells that are more permeable to SYTO9 but not yet permeable to PI. We test this hypothesis by quantifying SYTO9 and PI staining signals in samples treated with increasing concentrations of hydrogen peroxide. To distinguish the signals in the red channel between SYTO9 and PI, we apply the two dyes separately.
-
-![](../../../10-Optimize-FungaLight/11 Initial observation/output/fig1-staining-consistency-20240911.png)
-**Note the high green high red population in the 100 mM H2O2 treated _C. glabrata_ cells **
-
 ```{r setup, message=FALSE}
 require(flowCore)
 require(flowClust)
@@ -30,6 +24,13 @@ require(cowplot)
 ```{r}
 old <- theme_set(theme_minimal(base_size = 14) + panel_border(color = "gray20"))
 ```
+
+# Goal
+We observed an intermediate high-green high-red population most prominent in the 100 mM treated cells. This is different from what's shown in the FungaLight manual. We hypothesize that the high-green high-red popuplation are damaged cells that are more permeable to SYTO9 but not yet permeable to PI. We test this hypothesis by quantifying SYTO9 and PI staining signals in samples treated with increasing concentrations of hydrogen peroxide. To distinguish the signals in the red channel between SYTO9 and PI, we apply the two dyes separately.
+
+![](../../../10-Optimize-FungaLight/11 Initial observation/output/fig1-staining-consistency-20240911.png)
+**Note the high green high red population in the 100 mM H2O2 treated _C. glabrata_ cells **
+
 # Import data
 > original FCS files are stored in RDSS/user/hanxi-tang/flow cytometry. FCS files are copied to the current directory
 
@@ -140,8 +141,9 @@ recompute(gs)
 ```{r}
 scPars <- ggcyto_par_set(limits = list(x = c(0,1e6), y = c(0,1e5)))
 ex <- Subset(dat[c(2, 24)], singlet.gate)
-polygon <- matrix(c(10^2.5, 10^6, 10^6,
-                    10^2.1, 10^2.1, 10^5), ncol = 2)
+polygon <- matrix(c(10^2.7, 10^6, 10^6,   # BL1.H green
+                    10^2.2, 10^2.2, 10^5),# BL3.H red
+                  ncol = 2)
 #polygon <- matrix(c(1e2, 1e6, 1e6, 1e2,
 #                    10^2, 10^2, 1e6, 1e6), ncol = 2)
 colnames(polygon) <- c("BL1.H", "BL3.H")
@@ -163,8 +165,9 @@ recompute(gs)
 ```{r}
 #scPars <- ggcyto_par_set(limits = list(x = c(0,1e6), y = c(0,1e6)))
 ex <- Subset(dat[c(9,12)], singlet.gate)
-polygon <- matrix(c(0, 10^5, 10^5, 0,
-                    10^2.2, 10^2.2, 0, 0), ncol = 2)
+polygon <- matrix(c(0, 10^5, 10^5, 0,     # BL1.H, green
+                    10^2.2, 10^2.2, 0, 0),# BL3.H, red
+                  ncol = 2)
 colnames(polygon) <- c("BL1.H", "BL3.H")
 live.gate <- polygonGate(filterId = "live", boundaries = polygon)
 ggcyto(ex, aes(x = BL1.H, y = BL3.H)) + 
