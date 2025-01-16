@@ -121,12 +121,12 @@ recompute(gs)
 ## Gate for PI-positive cells
 
 ```{r}
-scPars <- ggcyto_par_set(limits = list(x = c(0,1e6), y = c(0,1e6)))
+scPars <- ggcyto_par_set(limits = list(x = c(0,1e5), y = c(0,1e5)))
 ex <- Subset(dat[c(5, 17)], singlet.gate)
 polygon <- matrix(c(0, 10^2.5, 10^2.5, 0, 
                     10^2.2, 10^2.2, 10^5, 10^5), ncol = 2)
 colnames(polygon) <- c("BL1.H", "BL3.H")
-PI.gate <- polygonGate(filterId = "PI-positive", boundaries = polygon)
+PI.gate <- polygonGate(filterId = "PI-positive", .gate = polygon)
 ggcyto(ex, aes(x = BL1.H, y = BL3.H)) + geom_hex(bins = 128) + geom_gate(dead.gate) + geom_stats() + scPars + scale_x_logicle() + scale_y_logicle() 
 ```
 Add this gate to the gatingSet
@@ -141,7 +141,7 @@ recompute(gs)
 ```{r}
 scPars <- ggcyto_par_set(limits = list(x = c(0,1e6), y = c(0,1e5)))
 ex <- Subset(dat[c(2, 24)], singlet.gate)
-polygon <- matrix(c(10^2.7, 10^6, 10^6,   # BL1.H green
+polygon <- matrix(c(10^2.5, 10^5, 10^5,   # BL1.H green
                     10^2.2, 10^2.2, 10^5),# BL3.H red
                   ncol = 2)
 #polygon <- matrix(c(1e2, 1e6, 1e6, 1e2,
@@ -163,7 +163,7 @@ recompute(gs)
 ## Gate for live population
 
 ```{r}
-#scPars <- ggcyto_par_set(limits = list(x = c(0,1e6), y = c(0,1e6)))
+scPars <- ggcyto_par_set(limits = list(x = c(0,1e5), y = c(0,1e5)))
 ex <- Subset(dat[c(9,12)], singlet.gate)
 polygon <- matrix(c(0, 10^5, 10^5, 0,     # BL1.H, green
                     10^2.2, 10^2.2, 0, 0),# BL3.H, red
@@ -208,6 +208,8 @@ write_tsv(gated_stats, file = "../input/20240430-Cg-SYTO9-gated-stats.tsv")
 
 ## Overview, one replicate
 ```{r}
+scPars <- ggcyto_par_set(limits = list(x = c(0,10^5.5), y = c(0,10^5.5)))
+
 # set some thematic elements
 p.common <- list(
   scale_x_logicle(breaks = 10^c(2,3,4,5)),
@@ -320,13 +322,13 @@ ggsave("../output/20250106-fig3c-MFI-SYTO9-inter-over-treat.png",
        width = 3.8, height = 2.8)
 ```
 Statistical test (ANOVA)
-1. For SYTO9
+1. For SYTO9, green channel
 ```{r}
 lm <- lm(MFI ~ Treatment, data = dplyr::filter(tmp, Channel == "Green"))
 summary(lm)
 ```
 
-2. For PI
+2. For SYTO9, red channel
 ```{r}
 lm <- lm(MFI ~ Treatment, data = dplyr::filter(tmp, Channel == "Red"))
 summary(lm)
