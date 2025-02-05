@@ -141,8 +141,8 @@ recompute(gs)
 ```{r}
 scPars <- ggcyto_par_set(limits = list(x = c(0,1e6), y = c(0,1e5)))
 ex <- Subset(dat[c(2, 24)], singlet.gate)
-polygon <- matrix(c(10^2.5, 10^5, 10^5,   # BL1.H green
-                    10^2.2, 10^2.2, 10^5),# BL3.H red
+polygon <- matrix(c(10^3, 10^5.5, 10^5.5,   # BL1.H green
+                    10^2.2, 10^2.2, 10^4.5),# BL3.H red
                   ncol = 2)
 #polygon <- matrix(c(1e2, 1e6, 1e6, 1e2,
 #                    10^2, 10^2, 1e6, 1e6), ncol = 2)
@@ -223,7 +223,7 @@ p1 <- ggcyto(gs[select], subset = "singlet",
             aes(x = BL1.H, y = BL3.H)) + 
   geom_hex(bins = 128) + 
   geom_gate(PI.gate) + 
-  geom_stats(digits = 1, adjust = c(0.8, 0.3)) +
+  geom_stats(digits = 1, adjust = c(1.5, 0.3)) +
   facet_wrap(~Treatment, nrow = 1) +
   p.common +
   theme(strip.text = element_blank()) + scPars
@@ -235,7 +235,7 @@ p2 <- ggcyto(gs[select], subset = "singlet",
             aes(x = BL1.H, y = BL3.H)) + 
   geom_hex(bins = 128) + 
   geom_gate(SYTO9.gate) +
-  geom_stats(digits = 2, adjust = c(0.2, 0.2)) +
+  geom_stats(digits = 2, adjust = c(0.1, 1.2)) +
   facet_wrap(~Treatment, nrow = 1) +
   p.common + 
   theme(strip.text = element_blank()) + scPars
