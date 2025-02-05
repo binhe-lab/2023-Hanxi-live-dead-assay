@@ -221,7 +221,7 @@ p.exp <- plot_grid(
   ncol = 2, rel_widths = c(1.15, 1)
 )
 ggsave("../output/20250115-gating-strategy-example.png", p.exp,
-       height = 2, width = 3.1)
+       height = 2.2, width = 3.4)
 ```
 
 # Extract gated stats and MFI
@@ -243,7 +243,7 @@ gated_stats <- full_join(gated_cnt, gated_mfi, by = c("sample", "pop")) %>%
   right_join(pData(gs), by = c("sample" = "name")) %>% 
   relocate(Date, Treatment, Dye, .after = sample) %>% 
   relocate(sample, .after = last_col())
-write_tsv(gated_stats, file = "../output/20240124-log-h2o2-Cg-gated-stats.tsv")
+#write_tsv(gated_stats, file = "../output/20240124-log-h2o2-Cg-gated-stats.tsv")
 
 # we don't need the MFI for the latter analysis. add meta data to gated_cnt
 gated_freq <- left_join(sample, gated_cnt, by = c("name" = "sample")) %>% 
@@ -369,7 +369,9 @@ p <- cfu_dye %>%
   facet_wrap(~Method, nrow = 1) +
   theme(strip.background = element_blank(),
         strip.text = element_text(size = rel(0.9), face = 1),
-        axis.text = element_text(size = rel(0.8), angle = 90),
+        axis.text.x = element_text(size = rel(0.9), angle = 90),
+        axis.text.y = element_text(size = rel(0.9)),
+        axis.title = element_text(size = rel(0.9)),
         panel.spacing = unit(1, "lines"))
 p
 ggsave("../output/20250116-perc-live-compare-three-methods.png",
@@ -389,9 +391,13 @@ p.dye <- dye_based %>%
              position = position_jitter(0.1),
              size = 1.5) + 
   # overlay the p_intermediate points
+  stat_summary(aes(y = p_intermediate), geom = "point", shape = 19, size = 3,
+               fun = "mean", color = "steelblue3") +
+  stat_summary(aes(y = p_intermediate, group = NA), geom = "line",
+               fun = "mean", color = "steelblue") +
   geom_point(aes(y = p_intermediate, shape = as.character(Date)),
              position = position_jitter(0.1),
-             color = "steelblue", size = 1.5, stroke = 1.5) + 
+             color = "steelblue", size = 1.5, stroke = 1.2) + 
   scale_shape_manual(values = 4:6, guide = "none") +
   scale_y_continuous(labels = scales::percent, breaks = seq(0,1,0.25)) +
   labs(title = "CFU", x = bquote(H[2]*O[2]~(mM)), y = "% Live") +
@@ -401,6 +407,36 @@ p.dye <- dye_based %>%
 
 p.dye
 ```
+
+```{r}
+p.dye <- ungroup(dye_based) %>% 
+  dplyr::filter(Treatment != "5C", Dye == "Both") %>% 
+  select(Date, Treatment, p_live, p_intermediate) %>% 
+  pivot_longer(cols = c(p_live, p_intermediate), 
+               names_to = "par", values_to = "perc") %>% 
+  mutate(par = factor(par, levels = c("p_live", "p_intermediate"),
+                      labels = c("% live", "% intermediate"))) %>% 
+  ggplot(aes(x = Treatment, y = perc, group = par)) +
+  geom_bar(aes(fill = par), position = position_dodge(.9),
+    stat = "summary", fun = "mean", width = 0.8) +
+  geom_point(aes(shape = as.character(Date), color = par), 
+             position = position_jitterdodge(jitter.width = 0.1,
+                                             dodge.width = 0.9),
+             size = 1.5, stroke = 1.2) + 
+  scale_fill_manual(NULL, values = c("gray70", "lightblue3")) +
+  scale_color_manual(NULL, values = c("black", "steelblue")) +
+  scale_shape_manual(values = 4:6, guide = "none") +
+  scale_y_continuous(labels = scales::percent, breaks = seq(0,1,0.25)) +
+  labs(title = "CFU", x = bquote(H[2]*O[2]~(mM)), y = NULL) +
+  theme(strip.text = element_text(size = rel(1.2), face = 2),
+        strip.background = element_blank(),
+        plot.title = element_text(hjust = 0.5),
+        legend.position = "inside",
+        legend.position.inside = c(0.8, 0.9))
+
+p.dye
+```
+
 ```
 all %>% 
   dplyr::filter(!Treatment %in% c("mock", "5C"), Method != "wFGL") %>% 
