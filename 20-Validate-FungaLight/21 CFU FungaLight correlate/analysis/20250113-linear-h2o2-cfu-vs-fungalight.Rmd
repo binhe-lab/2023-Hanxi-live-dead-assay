@@ -1,7 +1,7 @@
 ---
-title: "Compare CFU and FungaLight for log dilution of H2O2"
+title: "Compare CFU and FungaLight for linear dilution of H2O2"
 author: Hanxi Tang, Bin He
-date: "2024-03-22 (updated `r Sys.time()`)"
+date: "2025-01-13 (updated `r Sys.time()`)"
 output:
   html_notebook:
     toc: true
@@ -24,20 +24,18 @@ old <- theme_set(theme_minimal(base_size = 14) + panel_border(color = "gray20"))
 ```
 
 # Background & Goal
-Having optimized the FungaLight assay conditions, we would like to compare its estimates to those by CFU and PI alone, two commonly used methods in the literature.
+In the [log dilution experiment](20240321-log-h2o2-cfu-vs-fungalight.Rmd), we compared FungaLight to the results of PI and CFU for _C. glabrata_ cells treated with 0, 10, 100 and 1,000 mM hydrogen peroxide. We noted there that FungaLight seems to provide better separation in its score between the 100 mM and 1M treated sample than CFU and PI did. This led us to question whether FungaLight can be useful in distinguishing the levels of damage caused by different sublethal doses of hydrogen peroxide, for which CFU would give non-distinguishable readings.
 
-The experiments for _C. glabrata_ were conducted on 2024.02.14-17. Post-treatment cells were stained with PI or PI+SYTO9, and run through flow cytometry. The same sample was also plated for CFU.
+Hanxi therefore performed an experiment on 2024-04-05 to 04-10, using a linear concentration series of hydrogen peroxide. This notebook records the pre-processing of that data and plotting the results.
 
-A similar experiment was done for _S. cerevisiae_ on 2024.02.25-28.
+_C. glabrata_ post-treatment cells were stained with FungaLight (PI+SYTO9), and run through flow cytometry. The same sample was also plated for CFU.
 
 # Import data
 > FCS files are stored in rdss/Users/Hanxi/flow cytometry under the above dates. They are copied to this repository under the same names.
 
-_note_: samples are labeled by the H2O2 doses they were treated with. an exception is "5C", which refers to samples taken prior to the treatment and stored in the fridge at 5 Celsius until treated samples are ready for flow cytometer. this was done as a control experiment. ask Hanxi about the specific rationale. 
-
 ```{r}
 # use relative path to make it easier for collaboration
-data.path = "../input/20240214-17 Log H2O2 correlation Cg/"
+data.path = "../input/20240405-10 linear H2O2 correlation Cg"
 dat0 <- read.flowSet(path = data.path, pattern = "*.fcs",
                      transformation = FALSE,  # the original values are already linearized. 
                      emptyValue = FALSE,  alter.names = TRUE,   # change parameter names to R format
@@ -48,21 +46,20 @@ Simplify the sample names
 
 ```{r}
 oriNames <- sampleNames(dat0)
-tmp <- str_split(oriNames, pattern = "[ _]+", simplify = TRUE)[,c(1, 6, 7)]
-colnames(tmp) <- c("Date", "Treatment", "Dye")
+tmp <- str_split(oriNames, pattern = "[ _]+", simplify = TRUE)[,c(1, 5)]
+colnames(tmp) <- c("Date", "Treatment")
 #treatment.levels <- c("mock", "5C", "10", "100", "1000")
 sample <- data.frame(tmp) %>% 
   mutate(
-    Dye = ifelse(Dye == "p.fcs", "PI", ifelse(Dye == "b.fcs", "Both", Dye)), 
-    Treatment = fct_inorder(Treatment),
-    name = paste(Date, paste0(Treatment, 
-                              ifelse(Treatment == "5C", "", "mM")), 
-                 Dye, sep = "_")
+    Date = mdy(Date),
+    Treatment = gsub("\\.fcs", "", Treatment), # remove suffix
+    Treatment = fct_inseq(Treatment),
+    name = paste(format(Date, "%Y%m%d"), paste0(Treatment, "mM"), sep = "_")
   )
 rownames(sample) <- oriNames
 dat <- dat0 # make a copy
 pData(dat) <- sample
-write_tsv(pData(dat), file = "../input/20240214-log-h2o2-cg-sample.tsv")
+write_tsv(pData(dat), file = "../input/20240405-linear-h2o2-cg-sample.tsv")
 ```
 
 
@@ -81,8 +78,6 @@ Add gate to GS
 gs <- GatingSet(dat) # create a GatingSet
 # rename the samples
 sampleNames(gs) <- pData(gs)$name
-# repair the Date column in pData
-pData(gs)$Date = paste0("0", pData(gs)$Date)
 # add the outlier gate
 gs_pop_add(gs, outlier.gate, parent = "root")
 recompute(gs)
@@ -96,7 +91,7 @@ ex <- Subset(dat[[1]], outlier.gate)
 polygon <- matrix(c(1e5, 1e5, 1e6, 1e6, 
                     60, 105, 135,60), ncol = 2)
 colnames(polygon) <- c("FSC.H", "FSC.W")
-singlet.gate <- polygonGate(filterId = "singlet", .gate = polygon)
+singlet.gate <- polygonGate(filterId = "singlet", boundaries = polygon)
 ggcyto(ex, aes(x = FSC.H, y = FSC.W)) + geom_hex(bins = 128) + geom_gate(singlet.gate) + geom_stats() + scPars
 ```
 
@@ -112,12 +107,13 @@ This is the live population with red fluorescence below 10^2.2
 
 > **Main takeaway**
 >
-> 1. From 10mM to 1M treated samples, %live decreases and the change is much more obvious in the dual stain (PI first or simultaneous) than PI alone
+> 1. Different from the last (log-dilution series) experiment, where we observed a large difference in %live between the mock and 100 mM treated cells, in this experiment the difference was not only variable across replicates but also much more modest, with the biggest change from 92% to 56%
 >
-> 2. The mock treated sample has a visible high red high green (not as high and prominent as the 100 mM treated) than 10 mM treated. It doesn't follow the trend above.
+> 2. %live drops to zero practically at 0.5M or above.
 
 ```{r}
 scPars <- ggcyto_par_set(limits = list(x = c(0,10^5.5), y = c(0,10^5.5)))
+dates <- unique(pData(gs)$Date)
 polygon <- matrix(c(0, 5*10^3, 5*10^3, 0, # BL1.H, green
                     10^2.2, 10^2.2, 0, 0),# BL3.H, red
                   ncol = 2)
@@ -130,14 +126,15 @@ p.axis <- list(
     strip.text = element_text(size = rel(1.1), face = 2)
   )
 )
-for(date in c("021424", "021624", "021724")){
+
+for(date in dates){
   p <- ggcyto(gs[pData(gs)$Date == date], aes(x = BL1.H, y = BL3.H), subset = "singlet") + 
     geom_hex(bins = 128) + 
-    geom_gate(live.gate) + 
+    geom_gate(live.gate) +
     geom_stats(location = "data", adjust = c(0.005, 5), digits = 1) + 
     labs(title = paste0("Date: ", date)) +
-    facet_grid(Dye ~ Treatment) +# scPars +
-    p.axis
+    facet_wrap(~ fct_inseq(Treatment)) +
+    p.axis + scPars
   print(p)
 }
 ```
@@ -151,16 +148,11 @@ recompute(gs)
 ## Gate for the intermediate population with high SYTO9
 This is the intermediate population with high Red and Green. We hypothesize that they represent oxidatively damaged cells with partially compromised plasma membranes, resulting in more SYTO9 accumulation but not a significant increase in PI.
 
-> <span style="color:red">Important: I changed the bottom boundary from 10^2.2 to 10^2.3, and the left boundary from 10^3 to 2*10^3</span>
-
 > **Main takeaway**
 >
-> 1. Different from the %live gate, the intermediate population is most obvious in the 
-> 100 mM treated sample, and absent in both the 10 mM and 1M treated ones. This suggests
-> that this population could be useful for distinguishing stress levels below the lethal concentration
-> but above the tolerance levels of the species - in this case, < 1M and > 10 mM.
+> 1. For some reason, the percentage reported by geom_stats() is way off for 0.5 - 1M treated samples
 >
-> 2. The mock treated sample showed an intermediate population. Was unexpected.
+> 2. % intermediate population peaked at 250 mM dose. Again, from 0.5M and up, we don't see much distinction among the samples.
 
 ```{r}
 #polygon <- matrix(c(10^5, 1*10^3, 10^5,
@@ -170,15 +162,15 @@ polygon <- matrix(c(10^3, 10^5.5, 10^5.5,   # BL1.H, green
                   ncol = 2)
 colnames(polygon) <- c("BL1.H", "BL3.H")
 inter.gate <- polygonGate(filterId = "inter", .gate = polygon)
-for(date in c("021424", "021624", "021724")){
+for(date in dates){
   p <- ggcyto(gs[pData(gs)$Date == date], aes(x = BL1.H, y = BL3.H),
               subset = "singlet") + 
     geom_hex(bins = 128) + 
     geom_gate(inter.gate) + 
-    geom_stats(location = "data",  adjust = c(0.05, 5), digits = 3) + 
+    geom_stats(location = "data", adjust = c(0.05, 5)) + 
     labs(title = paste0("Date: ", date)) +
-    facet_grid(Dye ~ Treatment) + scPars + 
-    p.axis
+    facet_wrap(~ fct_inseq(Treatment)) +
+    p.axis + scPars
   print(p)
 }
 ```
@@ -188,40 +180,23 @@ gs_pop_add(gs, inter.gate, parent = "singlet", name = "intermediate")
 recompute(gs)
 ```
 
-## Example plot of the gating strategy
-It's recommended by many journals to show an example of the gating strategy. This is especially important and useful in this case. We will separately illustrate the gating for the PI-alone and FungaLight
-
+## Plot to illustrate staining pattern
+Show an example of the staining pattern with one replicate
 ```{r}
-scPars <- ggcyto_par_set(limits = list(x = c(0,10^5.5), y = c(0,10^5)))
-# sample #6 is 100 mM treated, PI stained cell
-p.exp_PI <- ggcyto(gs[[26]], aes(x = BL1.H, y = BL3.H), subset = "singlet") + 
+scPars <- ggcyto_par_set(limits = list(x = c(0,10^5), y = c(0,10^4)))
+p.ex <- ggcyto(gs[pData(gs)$Date == "2024-04-10"], 
+               aes(x = BL1.H, y = BL3.H), subset = "singlet") + 
   geom_hex(bins = 64) + 
-  geom_gate(live.gate, colour = "gray20") + 
-  labs(title = NULL, x = NULL, y = NULL) +
-  facet_wrap(~Dye) +
+  geom_gate("live", colour = "gray20") + 
+  #geom_stats(location = "data", adjust = c(0.05, 5)) + 
+  labs(title = NULL) +
+  facet_wrap(~ fct_inseq(Treatment)) +
   p.axis + scPars
-
-# sample #5 is 100 mM treated, both SYTO9+PI stained cell
-p.exp_FGL <- ggcyto(gs[[25]], aes(x = BL1.H, y = BL3.H), subset = "singlet") + 
-  geom_hex(bins = 64) + 
-  geom_gate(live.gate, colour = "gray20") + 
-  geom_gate(inter.gate, colour = "steelblue3") + 
-  labs(title = NULL, x = NULL, y = NULL) +
-  facet_wrap(~Dye, labeller = labeller(Dye = c("Both" = "FungaLight"))) +
-  p.axis + scPars
-
-plot_grid(as.ggplot(p.exp_PI), as.ggplot(p.exp_FGL))
-
-p.exp <- plot_grid(
-  as.ggplot(p.exp_PI) + 
-    theme(strip.text = element_text(size = rel(0.9), face = 1)), 
-  as.ggplot(p.exp_FGL) +
-    theme(strip.text = element_text(size = rel(0.9), face = 1),
-          axis.text.y = element_blank(),), 
-  ncol = 2, rel_widths = c(1.15, 1)
-)
-ggsave("../output/20250115-gating-strategy-example.png", p.exp,
-       height = 2, width = 3.1)
+p.ex
+ggsave("../output/20250120-linear-h2o2-example-FGL-staining.png", 
+       plot = p.ex + labs(title = NULL, x = NULL, y = NULL) +
+         theme(strip.text = element_text(size = rel(0.9), face = 1)),
+       width = 3.6, height = 3.2)
 ```
 
 # Extract gated stats and MFI
@@ -241,15 +216,18 @@ Combine the data and meta data
 ```{r}
 gated_stats <- full_join(gated_cnt, gated_mfi, by = c("sample", "pop")) %>% 
   right_join(pData(gs), by = c("sample" = "name")) %>% 
-  relocate(Date, Treatment, Dye, .after = sample) %>% 
-  relocate(sample, .after = last_col())
-write_tsv(gated_stats, file = "../output/20240124-log-h2o2-Cg-gated-stats.tsv")
+  relocate(Date, Treatment, .after = sample) %>% 
+  relocate(sample, .after = last_col()) %>% 
+  arrange(Date, as.numeric(Treatment))
+write_tsv(gated_stats, file = "../output/20240405-linear-h2o2-Cg-gated-stats.tsv")
 
 # we don't need the MFI for the latter analysis. add meta data to gated_cnt
 gated_freq <- left_join(sample, gated_cnt, by = c("name" = "sample")) %>% 
   select(-name) %>% 
-  group_by(Date, Treatment, Dye) %>% 
-  mutate(perc = count / count[pop == "singlet"], .after = count)
+  group_by(Date, Treatment) %>% 
+  mutate(perc = count / count[pop == "singlet"], .after = count,
+         Treatment = fct_inseq(Treatment)) %>% 
+  arrange(Date, Treatment)
 ```
 
 ```
@@ -278,14 +256,6 @@ print(final %>% select(-sample))
 
 # Compare with CFU
 ## Read CFU data 
-These are averaged CFU provided by Hanxi. The raw counts data will be provided by her separately.
-```{r}
-cfu <- read_tsv("../input/20240219-log-h2o2-Cg-CFU-HT.tsv") %>% 
-  mutate(Method = "CFU", .after = Treatment) %>% 
-  mutate(Treatment = fct_recode(Treatment, `0` = "mock")) %>%
-  rename(p_live = CFU)
-```
-
 Here are the raw cfu data
 ```{r}
 cfu_raw <- read_tsv("../input/20240214-0405-h2o2-Cg-CFU-raw.tsv",
@@ -295,19 +265,20 @@ cfu_calc <- cfu_raw %>%
   mutate(Date = ymd(Date),
          Treatment = fct_inseq(Treatment),
          CFU = Dilution * Total) %>% 
+  # we only need the linear range experiment
+  dplyr::filter(Date > ymd("20240401")) %>% 
   # group by Date to calculate the ratio of MO to MM
   group_by(Date) %>% 
-  mutate(p_live = CFU / CFU[Group == "MM"]) %>% 
-  # we only need the log dilution series
-  dplyr::filter(Date < ymd("20240301"))
+  mutate(p_live = CFU / CFU[Group == "MM"])
 ```
-## Calculate survival from PI alone or FungaLight
 
-For both PI alone and FungaLight, we will calculate the percent live events. For FungaLight specifically, we will also record the percent intermediate events and will investigate its utility
+## Calculate survival from FungaLight
+
+We calculate the percent live as the FGL survival. We also record the percent intermediate events and will investigate its utility for distinguishing doses not distinguishable by CFU.
 ```{r}
 dye_based <- gated_freq %>% 
   # record the total number of events as the count of singlets
-  group_by(Date, Treatment, Dye) %>% 
+  group_by(Date, Treatment) %>% 
   mutate(total = count[pop == "singlet"]) %>% 
   # now we don't need the singlet population and the count variable
   select(-count) %>% 
@@ -339,68 +310,79 @@ all <- bind_rows(
 ) 
 ```
 
-Combine the dye based results with cfu
-```{r}
-cfu_dye <- bind_rows(cfu,
-  select(dye_based, Date, Treatment, Method = Dye, starts_with("p"))) %>% 
-  mutate(
-    Method = factor(Method, levels = c("CFU", "PI", "Both"),
-                    labels = c("CFU", "PI", "FungaLight")),
-    Treatment = fct_inorder(Treatment)
-  )
-```
-
 ## Plotting the results
-Compare the three methods
+CFU survival
 ```{r}
-h2o2.levels <- c("0" = "0", "10" = "10", "100" = "100", "1000" = "1K")
-p <- cfu_dye %>% 
-  dplyr::filter(Treatment != "5C") %>% 
-  ggplot(aes(x = Treatment, y = p_live, group = Method)) +
-  geom_bar(stat = "summary", fun = "mean", fill = "gray70", width = 0.7) +
-  geom_point(aes(shape = Date), position = position_jitter(0.2),
+p.cfu <- cfu_calc %>% 
+  ggplot(aes(x = Treatment, y = p_live)) +
+  geom_bar(stat = "summary", fun = "mean", fill = "gray70", width = 0.8) +
+  geom_point(aes(shape = as.character(Date)), 
+             position = position_jitter(0.1),
              size = 1.5) + 
   scale_shape_manual(values = 4:6, guide = "none") +
   scale_y_continuous(labels = scales::percent, 
-                     limits = c(NA, 1.1), breaks = seq(0,1,0.5)) +
-  scale_x_discrete(labels = h2o2.levels) +
-  #coord_flip() + 
-  labs(x = bquote(H[2]*O[2]~(mM)), y = "% Live") +
-  facet_wrap(~Method, nrow = 1) +
-  theme(strip.background = element_blank(),
-        strip.text = element_text(size = rel(0.9), face = 1),
-        axis.text = element_text(size = rel(0.8), angle = 90),
-        panel.spacing = unit(1, "lines"))
-p
-ggsave("../output/20250116-perc-live-compare-three-methods.png",
-       width = 4, height = 2.5)
+                     limits = c(NA, 1.05), breaks = seq(0,1,0.5)) +
+  labs(title = "CFU", x = bquote(H[2]*O[2]~(mM)), y = "% Live") +
+  theme(strip.text = element_text(size = rel(1.2), face = 2),
+        strip.background = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+
+p.cfu
 ```
 
-Check the percent of events in the "Intermediate" gate.
-
-> 100 mM H2O2 treated sample show a significant increase in the Intermediate gate events.
-
+FungaLight results
 ```{r}
 p.dye <- dye_based %>% 
-  dplyr::filter(Treatment != "5C", Dye == "Both") %>% 
   ggplot(aes(x = Treatment, y = p_live)) +
   geom_bar(stat = "summary", fun = "mean", fill = "gray70", width = 0.8) +
   geom_point(aes(shape = as.character(Date)), 
              position = position_jitter(0.1),
              size = 1.5) + 
   # overlay the p_intermediate points
+  stat_summary(aes(y = p_intermediate), geom = "point", shape = 95,
+            fun = "mean", size = 5, color = "steelblue3") +
+  stat_summary(aes(y = p_intermediate, group = NA), geom = "line",
+            fun = "mean", color = "steelblue") +
   geom_point(aes(y = p_intermediate, shape = as.character(Date)),
              position = position_jitter(0.1),
              color = "steelblue", size = 1.5, stroke = 1.5) + 
   scale_shape_manual(values = 4:6, guide = "none") +
-  scale_y_continuous(labels = scales::percent, breaks = seq(0,1,0.25)) +
-  labs(title = "CFU", x = bquote(H[2]*O[2]~(mM)), y = "% Live") +
+  scale_y_continuous(labels = scales::percent, 
+                     limits = c(NA, 1.05), breaks = seq(0,1,0.5)) +
+  labs(title = "FungaLight", x = bquote(H[2]*O[2]~(mM)), y = "% Live") +
   theme(strip.text = element_text(size = rel(1.2), face = 2),
         strip.background = element_blank(),
         plot.title = element_text(hjust = 0.5))
 
 p.dye
 ```
+
+Assemble the plot
+```{r}
+plot_grid(
+  p.cfu + labs(x = NULL, y = NULL) +
+    theme(axis.text.x = element_blank(),
+          title = element_text(size = rel(0.7)),
+          axis.text = element_text(size = rel(0.8))),
+  p.dye + labs(x = NULL, y = NULL) +
+    theme(title = element_text(size = rel(0.7)),
+          axis.text = element_text(size = rel(0.8))), 
+  nrow = 2, rel_heights = c(1, 1.2)
+)
+ggsave("../output/20250120-linear-h2o2-CFU-FGL-compare.png",
+       width = 2.8, height = 3.1)
+```
+```
+plot_grid(
+  p.cfu + scale_x_discrete(limits = rev) + coord_flip(),
+  p.dye + scale_x_discrete(limits = rev) + coord_flip() + 
+    theme(axis.title.y = element_blank(), axis.text.y = element_blank()),
+  rel
+)
+```
+
+---
+
 ```
 all %>% 
   dplyr::filter(!Treatment %in% c("mock", "5C"), Method != "wFGL") %>% 
@@ -422,7 +404,7 @@ ggsave("../output/20240323-for-R35-CFU-compared-with-FGL-and-PI.png", width = 5,
 
 Below are hanxi's plotting code
 <!---
-```
+```{r}
 combined_data <- read_tsv("/space/htang5/Documents/FUN1_data_analysis/biol-4386-course-project-htang5/Methods Paper Writing/02-FungaLight-Distinguishing-Power/Input/20240219-PI-Both-Distinguishing-Power-gated-CFU-ht.tsv")
 print(combined_data)
 combined_data %>% 
@@ -444,7 +426,7 @@ combined_data %>%
 ```
 
 
-```
+```{r}
 combined_data$new_FGS <- 1*combined_data$percent_Live - 0.6*combined_data$percent_inter - combined_data$percent_Dead
 pf1g <- combined_data %>%
   pivot_longer(cols = c(CFU_Survival, new_FGS),
@@ -479,7 +461,7 @@ ggsave("../output/20240301-Cg-Log-Gated_.png", width = 7, height = 5)
 
 
 
-```
+```{r}
 combined_data$percent_PIDead <- 1 - (combined_data$n_PIDead / combined_data$n_singlet)
 p <- combined_data %>%
   pivot_longer(cols = c(CFU_Survival, percent_PIDead),
@@ -511,7 +493,7 @@ p +
 ggsave("../output/20240301-Cg-Log-Gated-PI.png", width = 7, height = 5)
 ```
 
-```
+```{r}
 pf1g <- combined_data %>%
   dplyr::filter(!(Dye %in% c("Both"))) %>% 
   dplyr::filter(!(Treatment %in% c("1000", "5C")))  %>%
