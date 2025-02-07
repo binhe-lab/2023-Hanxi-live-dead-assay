@@ -408,6 +408,26 @@ plot_grid(
 ggsave("../output/20250120-linear-h2o2-CFU-FGL-compare.png",
        width = 3.1, height = 3.1)
 ```
+## Statistical tests
+We use Tukey HSD test to compare all pairs of conditionsn for CFU
+```{r}
+tmp <- aov(p_live ~ Treatment, data = cfu_calc)
+TukeyHSD(tmp)
+```
+
+For p_live with FungaLight
+```{r}
+tmp <- aov(p_live ~ Treatment, data = dye_based)
+TukeyHSD(tmp)
+```
+
+For p_intermediate with FungaLight
+```{r}
+tmp <- aov(p_intermediate ~ Treatment, data = dye_based)
+TukeyHSD(tmp)
+```
+
+
 ```
 plot_grid(
   p.cfu + scale_x_discrete(limits = rev) + coord_flip(),

@@ -394,7 +394,7 @@ p <- cfu_dye %>%
   facet_wrap(~Method, nrow = 1) +
   theme(strip.background = element_blank(),
         strip.text = element_text(size = rel(0.9), face = 1),
-        axis.text.x = element_text(size = rel(0.9), angle = 90, hjust = 1),
+        axis.text.x = element_text(size = rel(0.9), angle = 90, vjust = .5),
         axis.text.y = element_text(size = rel(0.9)),
         axis.title = element_text(size = rel(0.9)),
         panel.spacing = unit(1, "lines"))
@@ -484,6 +484,10 @@ cfu_dye %>%
          Padj = adj.p.value)
 ```
 
+---
+
+Below are hanxi's plotting code
+<!---
 ```
 all %>% 
   dplyr::filter(!Treatment %in% c("mock", "5C"), Method != "wFGL") %>% 
@@ -501,10 +505,6 @@ all %>%
 ggsave("../output/20240323-for-R35-CFU-compared-with-FGL-and-PI.png", width = 5, height = 3)
 ```
 
----
-
-Below are hanxi's plotting code
-<!---
 ```
 combined_data <- read_tsv("/space/htang5/Documents/FUN1_data_analysis/biol-4386-course-project-htang5/Methods Paper Writing/02-FungaLight-Distinguishing-Power/Input/20240219-PI-Both-Distinguishing-Power-gated-CFU-ht.tsv")
 print(combined_data)
