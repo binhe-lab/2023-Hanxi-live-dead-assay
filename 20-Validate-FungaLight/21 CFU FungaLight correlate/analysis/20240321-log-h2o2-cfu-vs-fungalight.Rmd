@@ -67,12 +67,37 @@ write_tsv(pData(dat), file = "../input/20240214-log-h2o2-cg-sample.tsv")
 
 
 # Gatting strategies {.tabset}
+## Load all gates from specification file
+```{r}
+source("../script/20250206-FGL-flow-gate-specification.R")
+# below were the content initially used to populate the specification file above
+## outlier gate
+#outlier.gate <- rectangleGate(filterId = "-outlier", "FSC.H" = c(1.2e5, 1e6), "SSC.H" = c(1e2, 1e6))
+## single cell gate
+#polygon <- matrix(c(1e5, 1e5, 1e6, 1e6, 
+#                    60, 105, 135,60), ncol = 2)
+#colnames(polygon) <- c("FSC.H", "FSC.W")
+#singlet.gate <- polygonGate(filterId = "singlet", .gate = polygon)
+## live cell gate
+#polygon <- matrix(c(0, 5*10^3, 5*10^3, 0, # BL1.H, green
+#                    10^2.2, 10^2.2, 0, 0),# BL3.H, red
+#                  ncol = 2)
+#colnames(polygon) <- c("BL1.H", "BL3.H")
+#live.gate <- polygonGate(filterId = "live", .gate = polygon)
+## intermediate gate
+#polygon <- matrix(c(10^3, 10^5.5, 10^5.5,   # BL1.H, green
+#                    10^2.2, 10^2.2, 10^4.5),# BL3.H, red
+#                  ncol = 2)
+#colnames(polygon) <- c("BL1.H", "BL3.H")
+#inter.gate <- polygonGate(filterId = "inter", .gate = polygon)
+```
+
 ## Gating for singlets
 >The following gaphing steps are used to gate singlets by FSC and SSC values. Only singlets are included in analysis.
 >Gate for outlier 
 
 ```{r}
-outlier.gate <- rectangleGate(filterId = "-outlier", "FSC.H" = c(1.2e5, 1e6), "SSC.H" = c(1e2, 1e6))
+#outlier.gate <- rectangleGate(filterId = "-outlier", "FSC.H" = c(1.2e5, 1e6), "SSC.H" = c(1e2, 1e6))
 ggcyto(dat[1], aes(x = FSC.H, y = SSC.H), subset = "root") +
   geom_hex(bins = 64) + geom_gate(outlier.gate) + facet_wrap(~name, ncol = 2) + ggcyto_par_set(limits = "instrument")
 ```
@@ -93,10 +118,10 @@ recompute(gs)
 ```{r fig.width=4, fig.height=4}
 scPars <- ggcyto_par_set(limits = list(x = c(0,1e6), y = c(30,300)))
 ex <- Subset(dat[[1]], outlier.gate)
-polygon <- matrix(c(1e5, 1e5, 1e6, 1e6, 
-                    60, 105, 135,60), ncol = 2)
-colnames(polygon) <- c("FSC.H", "FSC.W")
-singlet.gate <- polygonGate(filterId = "singlet", .gate = polygon)
+#polygon <- matrix(c(1e5, 1e5, 1e6, 1e6, 
+#                    60, 105, 135,60), ncol = 2)
+#colnames(polygon) <- c("FSC.H", "FSC.W")
+#singlet.gate <- polygonGate(filterId = "singlet", .gate = polygon)
 ggcyto(ex, aes(x = FSC.H, y = FSC.W)) + geom_hex(bins = 128) + geom_gate(singlet.gate) + geom_stats() + scPars
 ```
 
@@ -118,11 +143,11 @@ This is the live population with red fluorescence below 10^2.2
 
 ```{r}
 scPars <- ggcyto_par_set(limits = list(x = c(0,10^5.5), y = c(0,10^5.5)))
-polygon <- matrix(c(0, 5*10^3, 5*10^3, 0, # BL1.H, green
-                    10^2.2, 10^2.2, 0, 0),# BL3.H, red
-                  ncol = 2)
-colnames(polygon) <- c("BL1.H", "BL3.H")
-live.gate <- polygonGate(filterId = "live", .gate = polygon)
+#polygon <- matrix(c(0, 5*10^3, 5*10^3, 0, # BL1.H, green
+#                    10^2.2, 10^2.2, 0, 0),# BL3.H, red
+#                  ncol = 2)
+#colnames(polygon) <- c("BL1.H", "BL3.H")
+#live.gate <- polygonGate(filterId = "live", .gate = polygon)
 p.axis <- list(
   scale_x_logicle(breaks = 10^c(2,3,4,5)),
   scale_y_logicle(breaks = 10^c(2,3,4,5)),
@@ -165,11 +190,11 @@ This is the intermediate population with high Red and Green. We hypothesize that
 ```{r}
 #polygon <- matrix(c(10^5, 1*10^3, 10^5,
 #                    10^2.2, 10^2.2, 10^4), ncol = 2)
-polygon <- matrix(c(10^3, 10^5.5, 10^5.5,   # BL1.H, green
-                    10^2.2, 10^2.2, 10^4.5),# BL3.H, red
-                  ncol = 2)
-colnames(polygon) <- c("BL1.H", "BL3.H")
-inter.gate <- polygonGate(filterId = "inter", .gate = polygon)
+#polygon <- matrix(c(10^3, 10^5.5, 10^5.5,   # BL1.H, green
+#                    10^2.2, 10^2.2, 10^4.5),# BL3.H, red
+#                  ncol = 2)
+#colnames(polygon) <- c("BL1.H", "BL3.H")
+#inter.gate <- polygonGate(filterId = "inter", .gate = polygon)
 for(date in c("021424", "021624", "021724")){
   p <- ggcyto(gs[pData(gs)$Date == date], aes(x = BL1.H, y = BL3.H),
               subset = "singlet") + 
@@ -243,7 +268,7 @@ gated_stats <- full_join(gated_cnt, gated_mfi, by = c("sample", "pop")) %>%
   right_join(pData(gs), by = c("sample" = "name")) %>% 
   relocate(Date, Treatment, Dye, .after = sample) %>% 
   relocate(sample, .after = last_col())
-#write_tsv(gated_stats, file = "../output/20240124-log-h2o2-Cg-gated-stats.tsv")
+write_tsv(gated_stats, file = "../output/20240124-log-h2o2-Cg-gated-stats.tsv")
 
 # we don't need the MFI for the latter analysis. add meta data to gated_cnt
 gated_freq <- left_join(sample, gated_cnt, by = c("name" = "sample")) %>% 
@@ -369,7 +394,7 @@ p <- cfu_dye %>%
   facet_wrap(~Method, nrow = 1) +
   theme(strip.background = element_blank(),
         strip.text = element_text(size = rel(0.9), face = 1),
-        axis.text.x = element_text(size = rel(0.9), angle = 90),
+        axis.text.x = element_text(size = rel(0.9), angle = 90, hjust = 1),
         axis.text.y = element_text(size = rel(0.9)),
         axis.title = element_text(size = rel(0.9)),
         panel.spacing = unit(1, "lines"))
@@ -435,6 +460,28 @@ p.dye <- ungroup(dye_based) %>%
         legend.position.inside = c(0.8, 0.9))
 
 p.dye
+```
+## Statistical tests
+We use ANOVA and posthoc test to test for significant differences between the conditions
+```{r}
+#tmp <- dplyr::filter(cfu_dye, Treatment != "5C", Method == "FungaLight") %>% 
+#  mutate(Treatment = fct_inseq(Treatment))
+#lm <- aov(p_live ~ Treatment, data = tmp)
+#TukeyHSD(lm)
+
+cfu_dye %>% 
+  dplyr::filter(Treatment != "5C") %>% 
+  mutate(Treatment = fct_inseq(Treatment)) %>% 
+  select(Treatment, Method, p_live) %>% 
+  nest(data = c(Treatment, p_live)) %>% 
+  mutate(
+    fit = map(data, \(df) aov(p_live ~ Treatment, data = df)),
+    posthoc = map(fit, TukeyHSD),
+    tidied = map(posthoc, tidy)
+  ) %>% 
+  unnest(tidied) %>% 
+  select(Method, contrast, diff = estimate, lwr = conf.low, upr = conf.high,
+         Padj = adj.p.value)
 ```
 
 ```

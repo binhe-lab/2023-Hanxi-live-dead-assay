@@ -64,12 +64,17 @@ write_tsv(pData(dat), file = "../input/20240405-linear-h2o2-cg-sample.tsv")
 
 
 # Gatting strategies {.tabset}
+## Load all gates from specification file
+```{r}
+source("../script/20250206-FGL-flow-gate-specification.R")
+```
+
 ## Gating for singlets
 >The following gaphing steps are used to gate singlets by FSC and SSC values. Only singlets are included in analysis.
 >Gate for outlier 
 
 ```{r}
-outlier.gate <- rectangleGate(filterId = "-outlier", "FSC.H" = c(1.2e5, 1e6), "SSC.H" = c(1e2, 1e6))
+#outlier.gate <- rectangleGate(filterId = "-outlier", "FSC.H" = c(1.2e5, 1e6), "SSC.H" = c(1e2, 1e6))
 ggcyto(dat[1], aes(x = FSC.H, y = SSC.H), subset = "root") +
   geom_hex(bins = 64) + geom_gate(outlier.gate) + facet_wrap(~name, ncol = 2) + ggcyto_par_set(limits = "instrument")
 ```
@@ -88,10 +93,10 @@ recompute(gs)
 ```{r fig.width=4, fig.height=4}
 scPars <- ggcyto_par_set(limits = list(x = c(0,1e6), y = c(30,300)))
 ex <- Subset(dat[[1]], outlier.gate)
-polygon <- matrix(c(1e5, 1e5, 1e6, 1e6, 
-                    60, 105, 135,60), ncol = 2)
-colnames(polygon) <- c("FSC.H", "FSC.W")
-singlet.gate <- polygonGate(filterId = "singlet", boundaries = polygon)
+#polygon <- matrix(c(1e5, 1e5, 1e6, 1e6, 
+#                    60, 105, 135,60), ncol = 2)
+#colnames(polygon) <- c("FSC.H", "FSC.W")
+#singlet.gate <- polygonGate(filterId = "singlet", boundaries = polygon)
 ggcyto(ex, aes(x = FSC.H, y = FSC.W)) + geom_hex(bins = 128) + geom_gate(singlet.gate) + geom_stats() + scPars
 ```
 
@@ -114,11 +119,11 @@ This is the live population with red fluorescence below 10^2.2
 ```{r}
 scPars <- ggcyto_par_set(limits = list(x = c(0,10^5.5), y = c(0,10^5.5)))
 dates <- unique(pData(gs)$Date)
-polygon <- matrix(c(0, 5*10^3, 5*10^3, 0, # BL1.H, green
-                    10^2.2, 10^2.2, 0, 0),# BL3.H, red
-                  ncol = 2)
-colnames(polygon) <- c("BL1.H", "BL3.H")
-live.gate <- polygonGate(filterId = "live", .gate = polygon)
+#polygon <- matrix(c(0, 5*10^3, 5*10^3, 0, # BL1.H, green
+#                    10^2.2, 10^2.2, 0, 0),# BL3.H, red
+#                  ncol = 2)
+#colnames(polygon) <- c("BL1.H", "BL3.H")
+#live.gate <- polygonGate(filterId = "live", .gate = polygon)
 p.axis <- list(
   scale_x_logicle(breaks = 10^c(2,3,4,5)),
   scale_y_logicle(breaks = 10^c(2,3,4,5)),
@@ -157,11 +162,11 @@ This is the intermediate population with high Red and Green. We hypothesize that
 ```{r}
 #polygon <- matrix(c(10^5, 1*10^3, 10^5,
 #                    10^2.2, 10^2.2, 10^4), ncol = 2)
-polygon <- matrix(c(10^3, 10^5.5, 10^5.5,   # BL1.H, green
-                    10^2.2, 10^2.2, 10^4.5),# BL3.H, red
-                  ncol = 2)
-colnames(polygon) <- c("BL1.H", "BL3.H")
-inter.gate <- polygonGate(filterId = "inter", .gate = polygon)
+#polygon <- matrix(c(10^3, 10^5.5, 10^5.5,   # BL1.H, green
+#                    10^2.2, 10^2.2, 10^4.5),# BL3.H, red
+#                  ncol = 2)
+#colnames(polygon) <- c("BL1.H", "BL3.H")
+#inter.gate <- polygonGate(filterId = "inter", .gate = polygon)
 for(date in dates){
   p <- ggcyto(gs[pData(gs)$Date == date], aes(x = BL1.H, y = BL3.H),
               subset = "singlet") + 
@@ -195,7 +200,8 @@ p.ex <- ggcyto(gs[pData(gs)$Date == "2024-04-10"],
 p.ex
 ggsave("../output/20250120-linear-h2o2-example-FGL-staining.png", 
        plot = p.ex + labs(title = NULL, x = NULL, y = NULL) +
-         theme(strip.text = element_text(size = rel(0.9), face = 1)),
+         theme(strip.text = element_text(size = rel(0.8), face = 1),
+               axis.text = element_text(size = rel(0.8))),
        width = 3.6, height = 3.2)
 ```
 
@@ -357,20 +363,50 @@ p.dye <- dye_based %>%
 p.dye
 ```
 
+Alternative bar plots
+```{r}
+p.dye.side_by_side <- dye_based %>% 
+  select(Date, Treatment, p_live, p_intermediate) %>% 
+  pivot_longer(cols = c(p_live, p_intermediate), 
+               names_to = "par", values_to = "perc") %>% 
+  mutate(par = factor(par, levels = c("p_live", "p_intermediate"),
+                      labels = c("% live", "% intermediate"))) %>% 
+  ggplot(aes(x = Treatment, y = perc, group = par)) +
+  geom_bar(aes(fill = par), position = position_dodge(0.9),
+           stat = "summary", fun = "mean", width = 0.8) +
+  geom_point(aes(shape = as.character(Date), color = par), 
+             position = position_jitterdodge(jitter.width = 0.1,
+                                             dodge.width = 0.9),
+             size = 1.2) + 
+  scale_fill_manual(NULL, values = c("gray70", "lightblue2")) +
+  scale_color_manual(NULL, values = c("black", "steelblue")) +
+  scale_shape_manual(values = 4:6, guide = "none") +
+  scale_y_continuous(labels = scales::percent, 
+                     limits = c(NA, 1.05), breaks = seq(0,1,0.5)) +
+  labs(title = "FungaLight", x = bquote(H[2]*O[2]~(mM)), y = NULL) +
+  theme(strip.text = element_text(size = rel(1.2), face = 2),
+        strip.background = element_blank(),
+        plot.title = element_text(hjust = 0.5),
+        legend.position = "inside",
+        legend.position.inside = c(0.8, 0.9))
+
+p.dye.side_by_side
+```
 Assemble the plot
 ```{r}
 plot_grid(
   p.cfu + labs(x = NULL, y = NULL) +
     theme(axis.text.x = element_blank(),
           title = element_text(size = rel(0.7)),
-          axis.text = element_text(size = rel(0.8))),
-  p.dye + labs(x = NULL, y = NULL) +
+          axis.text = element_text(size = rel(0.7))),
+  p.dye.side_by_side + labs(x = NULL, y = NULL) +
     theme(title = element_text(size = rel(0.7)),
-          axis.text = element_text(size = rel(0.8))), 
+          axis.text = element_text(size = rel(0.7)),
+          legend.position = "none"),
   nrow = 2, rel_heights = c(1, 1.2)
 )
 ggsave("../output/20250120-linear-h2o2-CFU-FGL-compare.png",
-       width = 2.8, height = 3.1)
+       width = 3.1, height = 3.1)
 ```
 ```
 plot_grid(
