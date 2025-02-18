@@ -456,6 +456,21 @@ all %>%
 ggsave("../output/20240323-for-R35-CFU-compared-with-FGL-and-PI.png", width = 5, height = 3)
 ```
 
+Example of sample-to-sample variability, using 100 mM treated sample as case
+```{r}
+p <- ggcyto(gs[pData(gs)$Treatment %in% c("100", "250")],
+            aes(x = BL1.H, y = BL3.H), subset = "singlet") +
+  geom_hex(bins = 64) +
+  geom_gate(live.gate) +
+  geom_stats(location = "gate", adjust = c(2, 0.5), digits = 1) +
+  facet_grid(Treatment ~ Date) + 
+  labs(title = NULL) +
+  p.axis + scPars
+p
+ggsave("../output/20250214-example-variability-between-replicates.png", 
+       width = 5, height = 3.5)
+```
+
 ---
 
 Below are hanxi's plotting code
