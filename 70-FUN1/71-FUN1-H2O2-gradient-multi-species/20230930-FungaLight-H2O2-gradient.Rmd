@@ -15,6 +15,19 @@ output:
 This is the flow cytometry and CFU data for Cg, Sc, Kl. Cg, Sc, Kl treated with 0-1M H2O2 are stained with Fungalight 1, run through flow and plated for CFU (details in HT's ELN). Goal is to correlate Flow vs CFU and generate graphs for figure 3.
 
 ```{r setup, message=FALSE}
+# Install BiocManager if not already installed
+#if (!requireNamespace("BiocManager", quietly = TRUE)) {
+#    install.packages("BiocManager")
+#}
+
+# Install the required packages from Bioconductor
+#BiocManager::install(c("flowCore", "flowClust", "openCyto", "ggcyto"))
+
+library(flowCore)
+library(flowClust)
+library(openCyto)
+library(ggcyto)
+
 require(tidyverse)
 require(flowCore)
 require(flowClust)
@@ -34,7 +47,7 @@ fs0 <- fs # make a copy of the original data in case of corruption
 
 Specify the flowSet phenoData
 ```{r}
-source("../00-shared/script/20220326-simplify-names-subroutine.R")
+source("../../00-shared/01-script/20220326-simplify-names-subroutine.R")
 oriNames <- sampleNames(fs)
 tmp <- str_split(oriNames, pattern = "_", simplify = TRUE)[,c(1, 5)] 
 colnames(tmp) <- c("date", "treat") 
