@@ -16,6 +16,7 @@ library(ggcyto)
 library(cowplot)
 require(ggridges)
 library(PTXQC)
+library(ggplot2)
 ```
 
 # Import data
@@ -44,6 +45,52 @@ pData(dat.f1g) <- sample
 print(pData(dat.f1g))
 #write_tsv(pData(dat.f1g), file = "/space/htang5/Documents/FUN1_data_analysis/biol-4386-course-project-htang5/Methods Paper Writing/02-FungaLight-Distinguishing-Power/Input/20240325-Ca-PI-Both-Log-Correlation-raw-data-ht.tsv")
 ```
+
+# Correting green (BL1) and red (BL3) fluorescence by normalization to cell size, will move it after prepossing the data (gated out outliers and spurious events)(Creator: JY Liang)
+## There is no BL1.A or BL3.A data, only BL1.H and BL3.H. I cannot use the formula: Normalization GFP by cell size: NormFL1.A = FL1.A * sqrt(1/(FSC.A*SSC.A))
+## Instead, I can plot the BL1.H or BL3.H against the FSC and SSC (should choose area over height), then generate a regression model of BL1.H (or BL3.h) on SSC and SSC for each sample in Ca and the Sc (in other datasets), if there is no significant
+
+
+```{r}
+#Extract the first sample (flowFrame) matrix from the flowSet dat.f1g:
+sample_data <- dat.f1g[[1]]
+event_data <- as.data.frame(exprs(sample_data))
+
+# FSC vs BL1.H
+ggplot(event_data, aes(x = FSC.H, y = BL1.H)) +
+  geom_point(color = "darkgreen", alpha = 0.5) +
+  ggtitle("FSC.H vs BL1.H") +
+  xlab("FSC.H (Cell Size)") +
+  ylab("BL1.H (GFP Intensity)") +
+  theme_minimal()
+
+# SSC vs BL1.H
+ggplot(event_data, aes(x = SSC.H, y = BL1.H)) +
+  geom_point(color = "lightgreen", alpha = 0.5) +
+  ggtitle("SSC.H vs BL1.H") +
+  xlab("SSC.H (Cell granuity)") +
+  ylab("BL1.H (GFP Intensity)") +
+  theme_minimal()
+
+# FSC vs BL3.H
+ggplot(event_data, aes(x = FSC.H, y = BL3.H)) +
+  geom_point(color = "darkred", alpha = 0.5) +
+  ggtitle("FSC.H vs BL3.H") +
+  xlab("FSC.H (Cell Size)") +
+  ylab("BL1.H (GFP Intensity)") +
+  theme_minimal()
+
+# SSC vs BL3.H
+ggplot(event_data, aes(x = SSC.H, y = BL3.H)) +
+  geom_point(color = "red2", alpha = 0.5) +
+  ggtitle("SSC.H vs BL3.H") +
+  xlab("SSC.H (Cell granuity)") +
+  ylab("BL1.H (GFP Intensity)") +
+  theme_minimal()
+
+```
+
+
 
 
 # Gatting for Singlets
@@ -182,12 +229,13 @@ tmp <- fsApply(interpop, each_col, median)
 combined_data <- cbind(gated_data, tmp) %>%
     as.tibble() %>% relocate(name, .after = last_col())
 
-#write_tsv(combined_data, file = "../Input/20240124_four_variable_matrix.tsv")
+#write_tsv(combined_data, file = "./input/20240124_four_variable_matrix.tsv")
 print(combined_data)
 ```
 
 
 # Output Graph Production
+## Before cell size normalization
 >Several output graphs are produced, and are stored in the Output folder.
 
 ```{r}
@@ -214,7 +262,7 @@ p2 + scale_x_logicle() + scale_y_logicle() +
 #ggsave("./output/20240117-dye-Order-Flow-Plot.png", width = 7, height = 5)
 ```
 ```{r}
-combined_data <- read_tsv("/space/htang5/Documents/FUN1_data_analysis/biol-4386-course-project-htang5/Methods Paper Writing/02-FungaLight-Distinguishing-Power/Input/20240325-Ca-PI-Both-Distinguishing-Power-gated-CFU.tsv") %>% 
+combined_data <- read_tsv("./input/20240325-Ca-PI-Both-Distinguishing-Power-gated-CFU.tsv") %>% 
 mutate(Treatment = factor(Treatment, levels = c(0, "5C", 0.6, 6, 1000)))
 
 p1 <- combined_data %>% 
@@ -261,7 +309,7 @@ print(combined_plot)
 
 
 ```{r}
-combined_data1 <- read_tsv("D:/Liniux-Documents/FUN1_data_analysis/biol-4386-course-project-htang5/Methods Paper Writing/02-FungaLight-Distinguishing-Power/Input/20240619-Ca-PI-Both-Distinguishing-Power-gated-CFU.tsv")
+combined_data1 <- read_tsv("./input/20240619-Ca-PI-Both-Distinguishing-Power-gated-CFU.tsv")
 print(combined_data1)
 ```
 
